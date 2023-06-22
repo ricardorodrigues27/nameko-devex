@@ -34,6 +34,7 @@ curl -s -XPOST  "${STD_APP_URL}/products" \
     -H 'Content-Type: application/json' \
     -d '{"id": "the_odyssey", "title": "The Odyssey", "passenger_capacity": 101, "maximum_speed": 5, "in_stock": 10}'
 echo
+
 # Test: Get Product
 echo "=== Getting product id: the_odyssey ==="
 curl -s "${STD_APP_URL}/products/the_odyssey" | jq .
@@ -52,3 +53,7 @@ ID=$(echo ${ORDER_ID} | jq '.id')
 # Test: Get Order back
 echo "=== Getting Order ==="
 curl -s "${STD_APP_URL}/orders/${ID}" | jq .
+
+# Test: Delete Product
+echo "=== Deleting product id: the_odyssey ==="
+curl -s -XDELETE "${STD_APP_URL}/products/the_odyssey" | jq .

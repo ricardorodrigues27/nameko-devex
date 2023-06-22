@@ -62,6 +62,22 @@ def test_create_product(product, redis_client, service_container):
         int(stored_product[b'passenger_capacity']))
     assert product['in_stock'] == int(stored_product[b'in_stock'])
 
+def test_delete_product(create_product, redis_client, service_container):
+
+    stored_product = create_product()
+
+    with entrypoint_hook(service_container, 'delete') as delete:
+        delete(stored_product['id'])
+
+    assert 0 == redis_client.exists('products:{}'.format(stored_product['id']))
+
+
+def test_delete_product_fails_on_not_found(service_container):
+
+    with pytest.raises(NotFound):
+        with entrypoint_hook(service_container, 'delete') as delete:
+            delete(111)
+
 
 @pytest.mark.parametrize('product_overrides, expected_errors', [
     ({'id': 111}, {'id': ['Not a valid string.']}),

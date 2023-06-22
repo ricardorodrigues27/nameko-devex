@@ -47,6 +47,17 @@ def test_create(product, redis_client, storage):
         int(stored_product[b'passenger_capacity']))
     assert product['in_stock'] == int(stored_product[b'in_stock'])
 
+def test_delete_fails_on_not_found(storage):
+    with pytest.raises(storage.NotFound) as exc:
+        storage.delete(2)
+    assert 'Product ID 2 does not exist' == exc.value.args[0]
+
+
+def test_delete(storage, redis_client, products):
+    storage.delete('LZ129')
+    
+    assert 0 == redis_client.exists('products:LZ129')
+
 
 def test_decrement_stock(storage, create_product, redis_client):
     create_product(id=1, title='LZ 127', in_stock=10)

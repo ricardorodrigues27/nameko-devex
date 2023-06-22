@@ -108,6 +108,51 @@ scenarios:
     - if: '"${order_id}" == "NOT_FOUND"'
       then:
         - action: continue
+
+    # 5.1. Create Product for delete
+    - url: /products
+      label: products-create-for-delete
+      think-time: uniform(0s, 0s)
+      method: POST
+      headers:
+        cache-control: no-cache
+        Content-Type: application/json
+      body: 'request-body-string'
+      body: >
+        {
+          "id": "${id}-${__javaScript(Math.random())}-DEL",
+          "title": "${title}-DEL",
+          "passenger_capacity": ${passenger_capacity}-DEL,
+          "maximum_speed": ${maximum_speed}-DEL,
+          "in_stock": ${in_stock}-DEL
+        }          
+      assert:
+      - contains:
+        - 200
+        subject: http-code
+        not: false
+      extract-jsonpath:
+        product_id_for_delete: $.id
+        default: NOT_FOUND
+
+    - if: '"${product_id_for_delete}" == "NOT_FOUND"'
+      then:
+        - action: continue
+
+    # 5.2. Delete Product
+    - url: /products/${product_id_for_delete}
+      label: product-delete
+      think-time: uniform(0s, 0s)
+      method: DELETE
+        
+      assert:
+      - contains:
+        - 200
+        subject: http-code
+        not: false
+      extract-jsonpath:
+        product_id_deleted: $.id
+        default: NOT_FOUND
   
 reporting:
 - module: final-stats
