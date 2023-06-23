@@ -33,3 +33,9 @@ class GetOrderSchema(Schema):
 
     id = fields.Int()
     order_details = fields.Nested(OrderDetail, many=True)
+
+class ListOrdersSchema(Schema):
+    page = fields.Int()
+    page_size = fields.Int()
+    total = fields.Int()
+    items = fields.Nested(GetOrderSchema, many=True)

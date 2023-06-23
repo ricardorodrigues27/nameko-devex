@@ -21,6 +21,22 @@ class OrdersService:
             raise NotFound('Order with id {} not found'.format(order_id))
 
         return OrderSchema().dump(order).data
+    
+    @rpc
+    def list_orders(self, page=1, page_size=30):
+        # Calculate offset by page number and page size information
+        offset = (page - 1) * page_size
+
+        orders = self.db.query(Order).offset(offset).limit(page_size)
+        total = self.db.query(Order).count()
+
+        # Return a dictionary that contains the pagination result
+        return {
+            'page': page,
+            'page_size': page_size,
+            'total': total,
+            'items': OrderSchema(many=True).dump(orders).data
+        }
 
     @rpc
     def create_order(self, order_details):

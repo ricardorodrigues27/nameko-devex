@@ -8,7 +8,7 @@ from werkzeug import Response
 
 from gateway.entrypoints import http
 from gateway.exceptions import OrderNotFound, ProductNotFound
-from gateway.schemas import CreateOrderSchema, GetOrderSchema, ProductSchema
+from gateway.schemas import CreateOrderSchema, GetOrderSchema, ListOrdersSchema, ProductSchema
 
 
 class GatewayService(object):
@@ -73,7 +73,7 @@ class GatewayService(object):
         return Response(
             json.dumps({'id': product_data['id']}), mimetype='application/json'
         )
-    
+
     @http(
         "DELETE", "/products/<string:product_id>",
         expected_exceptions=ProductNotFound
@@ -89,6 +89,41 @@ class GatewayService(object):
         self.products_rpc.delete(product_id)
         return Response(
             json.dumps({'id': product_id}), mimetype='application/json'
+        )
+
+    @http("GET", "/orders")
+    def list_orders(self, request):
+        """List of orders with pagination.
+
+        (TODO)
+        Enhances the order details with full product details from the
+        products-service.
+
+        You can use query parameter to fetch orders with pagination:
+
+            page [integer]
+            Page number of the results to fetch.
+            Default: 1
+
+            page_size [integer]
+            The number of results per page (max 100).
+            Default: 30
+
+        Example:
+
+            /orders?page=2&page_size=60  
+        """
+        page = request.args.get('page', default=1, type=int)
+        page_size = request.args.get('page_size', default=30, type=int)
+
+        if page_size > 100:
+            page_size = 100
+
+        result = self.orders_rpc.list_orders(page=page, page_size=page_size)
+
+        return Response(
+            ListOrdersSchema().dumps(result).data,
+            mimetype='application/json'
         )
 
     @http("GET", "/orders/<int:order_id>", expected_exceptions=OrderNotFound)
