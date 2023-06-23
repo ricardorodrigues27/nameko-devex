@@ -64,7 +64,52 @@ scenarios:
         product_key: $.id
         default: NOT_FOUND
 
-    # 3. Create Orders
+    # 3.1. Create Product to delete
+    - url: /products
+      label: products-create-to-delete
+      think-time: uniform(0s, 0s)
+      method: POST
+      headers:
+        cache-control: no-cache
+        Content-Type: application/json
+      body: 'request-body-string'
+      body: >
+        {
+          "id": "${id}-${__javaScript(Math.random())}-DEL",
+          "title": "${title}-DEL",
+          "passenger_capacity": ${passenger_capacity},
+          "maximum_speed": ${maximum_speed},
+          "in_stock": ${in_stock}
+        }          
+      assert:
+      - contains:
+        - 200
+        subject: http-code
+        not: false
+      extract-jsonpath:
+        product_id_to_delete: $.id
+        default: NOT_FOUND
+
+    - if: '"${product_id_to_delete}" == "NOT_FOUND"'
+      then:
+        - action: continue
+
+    # 3.2. Delete Product
+    - url: /products/${product_id_to_delete}
+      label: product-delete
+      think-time: uniform(0s, 0s)
+      method: DELETE
+        
+      assert:
+      - contains:
+        - 200
+        subject: http-code
+        not: false
+      extract-jsonpath:
+        product_id_deleted: $.id
+        default: NOT_FOUND
+
+    # 4. Create Order
     - url: /orders
       label: orders-create
       think-time: uniform(0s, 0s)
@@ -90,7 +135,7 @@ scenarios:
       then:
         - action: continue
   
-    # 4. Get Orders
+    # 5. Get Order
     - url: /orders/${order_id}
       label: order-get
       think-time: uniform(0s, 0s)
@@ -109,50 +154,31 @@ scenarios:
       then:
         - action: continue
 
-    # 5.1. Create Product for delete
-    - url: /products
-      label: products-create-for-delete
+    # 6.1 List Orders
+    - url: /orders
+      label: orders-list
       think-time: uniform(0s, 0s)
-      method: POST
-      headers:
-        cache-control: no-cache
-        Content-Type: application/json
-      body: 'request-body-string'
-      body: >
-        {
-          "id": "${id}-${__javaScript(Math.random())}-DEL",
-          "title": "${title}-DEL",
-          "passenger_capacity": ${passenger_capacity}-DEL,
-          "maximum_speed": ${maximum_speed}-DEL,
-          "in_stock": ${in_stock}-DEL
-        }          
-      assert:
-      - contains:
-        - 200
-        subject: http-code
-        not: false
-      extract-jsonpath:
-        product_id_for_delete: $.id
-        default: NOT_FOUND
-
-    - if: '"${product_id_for_delete}" == "NOT_FOUND"'
-      then:
-        - action: continue
-
-    # 5.2. Delete Product
-    - url: /products/${product_id_for_delete}
-      label: product-delete
-      think-time: uniform(0s, 0s)
-      method: DELETE
+      method: GET
         
       assert:
       - contains:
         - 200
         subject: http-code
         not: false
-      extract-jsonpath:
-        product_id_deleted: $.id
-        default: NOT_FOUND
+
+    # 6.2. List Orders with custom pagination
+    - url: /orders?page=2&page_size=80
+      label: orders-list-with-custom-pagination
+      think-time: uniform(0s, 0s)
+      method: GET
+        
+      assert:
+      - contains:
+        - 200
+        subject: http-code
+        not: false
+
+    
   
 reporting:
 - module: final-stats

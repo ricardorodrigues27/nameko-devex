@@ -197,6 +197,87 @@ class TestGetOrder(object):
         assert payload['error'] == 'ORDER_NOT_FOUND'
         assert payload['message'] == 'missing'
 
+class TestListOrders(object):
+    def test_can_list_orders(self, gateway_service, web_session):
+        # setup mock orders-service response:
+        gateway_service.orders_rpc.list_orders.return_value = {
+            'page': 1,
+            'page_size': 30,
+            'total': 1,
+            'items': [{
+                'id': 1,
+                'order_details': [
+                    {
+                        'id': 1,
+                        'quantity': 2,
+                        'product_id': 'the_odyssey',
+                        'price': '200.00'
+                    },
+                    {
+                        'id': 2,
+                        'quantity': 1,
+                        'product_id': 'the_enigma',
+                        'price': '400.00'
+                    }
+                ]
+            }]
+        }
+
+        # call the gateway service to list orders
+        response = web_session.get('/orders')
+        assert response.status_code == 200
+
+        expected_response = {
+            'page': 1,
+            'page_size': 30,
+            'total': 1,
+            'items': [{
+                'id': 1,
+                'order_details': [
+                    {
+                        'id': 1,
+                        'quantity': 2,
+                        'product_id': 'the_odyssey',
+                        'price': '200.00'
+                    },
+                    {
+                        'id': 2,
+                        'quantity': 1,
+                        'product_id': 'the_enigma',
+                        'price': '400.00'
+                    }
+                ]
+            }]
+        }
+        assert expected_response == response.json()
+
+        # check dependencies called with default pagination as expected
+        assert [call(page=1, page_size=30)] == gateway_service.orders_rpc.list_orders.call_args_list
+
+    def test_can_list_orders_with_pagination(self, gateway_service, web_session):
+        # setup mock orders-service response:
+        gateway_service.orders_rpc.list_orders.return_value = {
+            'page': 2,
+            'page_size': 60,
+            'total': 0,
+            'items': []
+        }
+
+        # call the gateway service passing page and page_size:
+        response = web_session.get('/orders?page=2&page_size=60')
+        assert response.status_code == 200
+
+        expected_response = {
+            'page': 2,
+            'page_size': 60,
+            'total': 0,
+            'items': []
+        }
+        assert expected_response == response.json()
+
+        # check dependencies called with pagination as expected
+        assert [call(page=2, page_size=60)] == gateway_service.orders_rpc.list_orders.call_args_list
+
 
 class TestCreateOrder(object):
 
