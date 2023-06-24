@@ -40,6 +40,14 @@ def test_will_raise_when_order_not_found(orders_rpc):
         orders_rpc.get_order(1)
     assert err.value.value == 'Order with id 1 not found'
 
+@pytest.mark.usefixtures('order_details')
+def test_get_order_by_product_id(orders_rpc, order):
+    order_payload = OrderSchema().dump(order).data
+    first_product_id = order_payload['order_details'][0]['product_id']
+
+    response = orders_rpc.get_order_by_product_id(first_product_id)
+    assert response['id'] == order.id
+
 def test_list_orders(orders_rpc, order):
     response = orders_rpc.list_orders()
     assert response['items'][0]['id'] == order.id

@@ -21,7 +21,17 @@ class OrdersService:
             raise NotFound('Order with id {} not found'.format(order_id))
 
         return OrderSchema().dump(order).data
-    
+
+    @rpc
+    def get_order_by_product_id(self, product_id):
+        order = self.db.query(Order).join(OrderDetail).filter(
+            OrderDetail.product_id == product_id).first()
+        
+        if not order:
+            return None
+        
+        return OrderSchema().dump(order).data
+
     @rpc
     def list_orders(self, page=1, page_size=30):
         # Calculate offset by page number and page size information

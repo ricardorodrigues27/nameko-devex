@@ -76,7 +76,7 @@ class GatewayService(object):
 
     @http(
         "DELETE", "/products/<string:product_id>",
-        expected_exceptions=ProductNotFound
+        expected_exceptions=(ProductNotFound, BadRequest)
     )
     def delete_product(self, request, product_id):
         """Delete product by `product_id`
@@ -86,7 +86,14 @@ class GatewayService(object):
             {"id": "the_odyssey"}
 
         """
-        self.products_rpc.delete(product_id)
+
+        # Check if there is any Order related to the Product
+        order_with_product_id = self.orders_rpc.get_order_by_product_id(product_id)
+        if order_with_product_id is None:
+            self.products_rpc.delete(product_id)
+        else:
+            raise BadRequest("Product with Order can not be deleted")
+
         return Response(
             json.dumps({'id': product_id}), mimetype='application/json'
         )

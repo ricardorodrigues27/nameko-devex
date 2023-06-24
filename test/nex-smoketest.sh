@@ -58,6 +58,12 @@ curl -s "${STD_APP_URL}/orders/${ID}" | jq .
 echo "=== Listing Order ==="
 curl -s "${STD_APP_URL}/orders?page=1&per_page=30" | jq .
 
-# Test: Delete Product
-echo "=== Deleting product id: the_odyssey ==="
-curl -s -XDELETE "${STD_APP_URL}/products/the_odyssey" | jq .
+# Test: Delete a Product
+echo "=== Creating a product id to be deleted: the_honda ==="
+curl -s -XPOST  "${STD_APP_URL}/products" \
+    -H 'accept: application/json' \
+    -H 'Content-Type: application/json' \
+    -d '{"id": "the_honda", "title": "The Honda", "passenger_capacity": 1, "maximum_speed": 1, "in_stock": 1}'
+echo
+echo "=== Deleting product id: the_honda ==="
+curl -s -XDELETE "${STD_APP_URL}/products/the_honda" | jq .

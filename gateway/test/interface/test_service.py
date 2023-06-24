@@ -41,6 +41,14 @@ class TestGetProduct(object):
 
 class TestCreateProduct(object):
     def test_can_create_product(self, gateway_service, web_session):
+        gateway_service.products_rpc.create.return_value = {
+            "in_stock": 10,
+            "maximum_speed": 5,
+            "id": "the_odyssey",
+            "passenger_capacity": 101,
+            "title": "The Odyssey"
+        }
+
         response = web_session.post(
             '/products',
             json.dumps({
@@ -83,6 +91,7 @@ class TestCreateProduct(object):
 
 class TestDeletetProduct(object):
     def test_can_delete_product(self, gateway_service, web_session):
+        gateway_service.orders_rpc.get_order_by_product_id.return_value = None
         gateway_service.products_rpc.delete.return_value = {
             "id": "the_odyssey"}
 
@@ -93,7 +102,20 @@ class TestDeletetProduct(object):
         ]
         assert response.json() == {"id": "the_odyssey"}
 
+    def test_invalid_product_with_order(self, gateway_service, web_session):
+        gateway_service.orders_rpc.get_order_by_product_id.return_value = {
+            "id": "1"}
+        
+        response = web_session.delete('/products/the_odyssey')
+        assert response.status_code == 400
+        payload = response.json()
+        assert payload['error'] == 'BAD_REQUEST'
+        assert payload['message'] == 'Product with Order can not be deleted'
+
+
+
     def test_product_not_found(self, gateway_service, web_session):
+        gateway_service.orders_rpc.get_order_by_product_id.return_value = None
         gateway_service.products_rpc.delete.side_effect = (
             ProductNotFound('missing'))
 
