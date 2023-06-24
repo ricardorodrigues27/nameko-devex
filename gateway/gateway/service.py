@@ -69,9 +69,9 @@ class GatewayService(object):
             raise BadRequest("Invalid json: {}".format(exc))
 
         # Create the product
-        self.products_rpc.create(product_data)
+        product = self.products_rpc.create(product_data)
         return Response(
-            json.dumps({'id': product_data['id']}), mimetype='application/json'
+            json.dumps({'id': product['id']}), mimetype='application/json'
         )
 
     @http(

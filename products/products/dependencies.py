@@ -19,8 +19,6 @@ class StorageWrapper:
 
     """
 
-    NotFound = NotFound
-
     def __init__(self, client):
         self.client = client
 
@@ -44,7 +42,7 @@ class StorageWrapper:
         return self._from_hash(product)
 
     def list(self, product_ids=[]):
-        if product_ids == []:
+        if not product_ids:
             keys = self.client.scan_iter(count=1000)
         else:
             keys = {self._format_key(product_id) for product_id in product_ids}

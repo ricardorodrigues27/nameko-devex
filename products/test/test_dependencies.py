@@ -1,8 +1,9 @@
 import pytest
 from mock import Mock
-
 from nameko import config
+
 from products.dependencies import Storage
+from products.exceptions import NotFound
 
 
 @pytest.fixture
@@ -14,7 +15,7 @@ def storage(test_config):
 
 
 def test_get_fails_on_not_found(storage):
-    with pytest.raises(storage.NotFound) as exc:
+    with pytest.raises(NotFound) as exc:
         storage.get(2)
     assert 'Product ID 2 does not exist' == exc.value.args[0]
 
@@ -54,7 +55,7 @@ def test_create(product, redis_client, storage):
     assert product['in_stock'] == int(stored_product[b'in_stock'])
 
 def test_delete_fails_on_not_found(storage):
-    with pytest.raises(storage.NotFound) as exc:
+    with pytest.raises(NotFound) as exc:
         storage.delete(2)
     assert 'Product ID 2 does not exist' == exc.value.args[0]
 
