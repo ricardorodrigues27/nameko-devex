@@ -39,6 +39,13 @@ def test_list_products(products, service_container):
 
     assert products == sorted(listed_products, key=lambda p: p['id'])
 
+def test_list_products_with_filter(products, service_container):
+    with entrypoint_hook(service_container, 'list') as list_:
+        listed_products = list_(product_ids=['LZ127'])
+
+    assert len(listed_products) == 1
+    assert listed_products[0]['id'] == 'LZ127'
+
 
 def test_list_productis_when_empty(service_container):
 

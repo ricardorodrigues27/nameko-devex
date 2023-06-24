@@ -32,6 +32,12 @@ def test_list(storage, products):
     listed_products = storage.list()
     assert (
         products == sorted(list(listed_products), key=lambda x: x['id']))
+    
+def test_list_filtering_by_product_ids(storage, products):
+    listed_products = storage.list(product_ids=['LZ129'])
+    product_ids = [product['id'] for product in listed_products]
+    assert len(product_ids) == 1
+    assert product_ids[0] == 'LZ129'
 
 
 def test_create(product, redis_client, storage):
