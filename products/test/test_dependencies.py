@@ -1,8 +1,9 @@
 import pytest
 from mock import Mock
-
 from nameko import config
+
 from products.dependencies import Storage
+from products.exceptions import NotFound
 
 
 @pytest.fixture
@@ -14,7 +15,7 @@ def storage(test_config):
 
 
 def test_get_fails_on_not_found(storage):
-    with pytest.raises(storage.NotFound) as exc:
+    with pytest.raises(NotFound) as exc:
         storage.get(2)
     assert 'Product ID 2 does not exist' == exc.value.args[0]
 
@@ -32,6 +33,12 @@ def test_list(storage, products):
     listed_products = storage.list()
     assert (
         products == sorted(list(listed_products), key=lambda x: x['id']))
+    
+def test_list_filtering_by_product_ids(storage, products):
+    listed_products = storage.list(product_ids=['LZ129'])
+    product_ids = [product['id'] for product in listed_products]
+    assert len(product_ids) == 1
+    assert product_ids[0] == 'LZ129'
 
 
 def test_create(product, redis_client, storage):
@@ -46,6 +53,17 @@ def test_create(product, redis_client, storage):
     assert product['passenger_capacity'] == (
         int(stored_product[b'passenger_capacity']))
     assert product['in_stock'] == int(stored_product[b'in_stock'])
+
+def test_delete_fails_on_not_found(storage):
+    with pytest.raises(NotFound) as exc:
+        storage.delete(2)
+    assert 'Product ID 2 does not exist' == exc.value.args[0]
+
+
+def test_delete(storage, redis_client, products):
+    storage.delete('LZ129')
+    
+    assert 0 == redis_client.exists('products:LZ129')
 
 
 def test_decrement_stock(storage, create_product, redis_client):

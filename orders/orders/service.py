@@ -23,6 +23,32 @@ class OrdersService:
         return OrderSchema().dump(order).data
 
     @rpc
+    def get_order_by_product_id(self, product_id):
+        order = self.db.query(Order).join(OrderDetail).filter(
+            OrderDetail.product_id == product_id).first()
+        
+        if not order:
+            return None
+        
+        return OrderSchema().dump(order).data
+
+    @rpc
+    def list_orders(self, page=1, page_size=30):
+        # Calculate offset by page number and page size information
+        offset = (page - 1) * page_size
+
+        orders = self.db.query(Order).offset(offset).limit(page_size)
+        total = self.db.query(Order).count()
+
+        # Return a dictionary that contains the pagination result
+        return {
+            'page': page,
+            'page_size': page_size,
+            'total': total,
+            'items': OrderSchema(many=True).dump(orders).data
+        }
+
+    @rpc
     def create_order(self, order_details):
         order = Order(
             order_details=[

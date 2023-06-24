@@ -34,6 +34,7 @@ curl -s -XPOST  "${STD_APP_URL}/products" \
     -H 'Content-Type: application/json' \
     -d '{"id": "the_odyssey", "title": "The Odyssey", "passenger_capacity": 101, "maximum_speed": 5, "in_stock": 10}'
 echo
+
 # Test: Get Product
 echo "=== Getting product id: the_odyssey ==="
 curl -s "${STD_APP_URL}/products/the_odyssey" | jq .
@@ -52,3 +53,17 @@ ID=$(echo ${ORDER_ID} | jq '.id')
 # Test: Get Order back
 echo "=== Getting Order ==="
 curl -s "${STD_APP_URL}/orders/${ID}" | jq .
+
+# Test: List Orders
+echo "=== Listing Order ==="
+curl -s "${STD_APP_URL}/orders?page=1&per_page=30" | jq .
+
+# Test: Delete a Product
+echo "=== Creating a product id to be deleted: the_honda ==="
+curl -s -XPOST  "${STD_APP_URL}/products" \
+    -H 'accept: application/json' \
+    -H 'Content-Type: application/json' \
+    -d '{"id": "the_honda", "title": "The Honda", "passenger_capacity": 1, "maximum_speed": 1, "in_stock": 1}'
+echo
+echo "=== Deleting product id: the_honda ==="
+curl -s -XDELETE "${STD_APP_URL}/products/the_honda" | jq .
