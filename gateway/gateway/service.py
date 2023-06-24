@@ -95,7 +95,6 @@ class GatewayService(object):
     def list_orders(self, request):
         """List of orders with pagination.
 
-        (TODO)
         Enhances the order details with full product details from the
         products-service.
 
@@ -111,7 +110,16 @@ class GatewayService(object):
 
         Example:
 
-            /orders?page=2&page_size=60  
+            /orders?page=2&page_size=60
+
+        The response contains the pagination info and the orders in a json document ::
+
+            {
+                "page": 1,
+                "page_size": 30,
+                "total": 100,
+                "items": [Order]
+            }
         """
         page = request.args.get('page', default=1, type=int)
         page_size = request.args.get('page_size', default=30, type=int)
@@ -119,12 +127,56 @@ class GatewayService(object):
         if page_size > 100:
             page_size = 100
 
-        result = self.orders_rpc.list_orders(page=page, page_size=page_size)
+        list_orders_data = self._list_orders(page, page_size)
 
         return Response(
-            ListOrdersSchema().dumps(result).data,
+            ListOrdersSchema().dumps(list_orders_data).data,
             mimetype='application/json'
         )
+    
+    def _list_orders(self, page, page_size):
+        # Retrieve order data from the orders service using pagination
+        # Note - the response contains additional information for pagination
+        # Available keys: [page, page_size, total, items]
+        result = self.orders_rpc.list_orders(page=page, page_size=page_size)
+
+        if len(result['items']) > 0:
+            # Filter and preload products to fill in order_details data
+            orders_product_ids = self._extract_product_ids_from_orders(result['items'])
+            product_map = {prod['id']: prod for prod in self._list_products(orders_product_ids)}
+
+            for order in result['items']:
+                order.update(self._fill_order_details_with_product(order, product_map))
+
+        return result
+    
+    def _extract_product_ids_from_orders(self, orders):
+        all_product_ids = []
+        for order in orders:
+            order_product_ids = self._extract_product_ids_from_order(order)
+            all_product_ids.extend(order_product_ids)
+
+        return all_product_ids
+    
+    def _extract_product_ids_from_order(self, order):
+        return [order_detail['product_id'] for order_detail in order['order_details']]
+
+    def _list_products(self, product_ids):
+        return self.products_rpc.list(product_ids=product_ids)
+    
+    def _fill_order_details_with_product(self, order, product_map):
+        # get the configured image root
+        image_root = config['PRODUCT_IMAGE_ROOT']
+
+        # Enhance order details with product and image details.
+        for item in order['order_details']:
+            product_id = item['product_id']
+
+            item['product'] = product_map[product_id]
+            # Construct an image url.
+            item['image'] = '{}/{}.jpg'.format(image_root, product_id)
+
+        return order
 
     @http("GET", "/orders/<int:order_id>", expected_exceptions=OrderNotFound)
     def get_order(self, request, order_id):
@@ -145,21 +197,11 @@ class GatewayService(object):
         # raise``OrderNotFound``
         order = self.orders_rpc.get_order(order_id)
 
-        # Retrieve all products from the products service
-        product_map = {prod['id']: prod for prod in self.products_rpc.list()}
+        # Filter and preload products to fill in order_details data
+        order_product_ids = self._extract_product_ids_from_order(order)
+        product_map = {prod['id']: prod for prod in self._list_products(order_product_ids)}
 
-        # get the configured image root
-        image_root = config['PRODUCT_IMAGE_ROOT']
-
-        # Enhance order details with product and image details.
-        for item in order['order_details']:
-            product_id = item['product_id']
-
-            item['product'] = product_map[product_id]
-            # Construct an image url.
-            item['image'] = '{}/{}.jpg'.format(image_root, product_id)
-
-        return order
+        return self._fill_order_details_with_product(order, product_map)
 
     @http(
         "POST", "/orders",
@@ -201,17 +243,20 @@ class GatewayService(object):
             order_data = schema.loads(request.get_data(as_text=True)).data
         except ValueError as exc:
             raise BadRequest("Invalid json: {}".format(exc))
-
-        # Create the order
+        
         # Note - this may raise `ProductNotFound`
-        id_ = self._create_order(order_data)
-        return Response(json.dumps({'id': id_}), mimetype='application/json')
+        order_created = self._create_order(order_data)
+
+        return Response(json.dumps({'id': order_created['id']}), mimetype='application/json')
 
     def _create_order(self, order_data):
-        # check order product ids are valid
-        valid_product_ids = {prod['id'] for prod in self.products_rpc.list()}
+        # Filter and preload products from product service:
+        order_product_ids = self._extract_product_ids_from_order(order_data)
+        found_product_ids = {prod['id'] for prod in self._list_products(order_product_ids)}
+        
+        # Check if order product ids are valid
         for item in order_data['order_details']:
-            if item['product_id'] not in valid_product_ids:
+            if item['product_id'] not in found_product_ids:
                 raise ProductNotFound(
                     "Product Id {}".format(item['product_id'])
                 )
@@ -220,7 +265,4 @@ class GatewayService(object):
         # Dump the data through the schema to ensure the values are serialized
         # correctly.
         serialized_data = CreateOrderSchema().dump(order_data).data
-        result = self.orders_rpc.create_order(
-            serialized_data['order_details']
-        )
-        return result['id']
+        return self.orders_rpc.create_order(serialized_data['order_details'])

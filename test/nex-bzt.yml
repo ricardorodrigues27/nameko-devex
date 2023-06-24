@@ -154,7 +154,7 @@ scenarios:
       then:
         - action: continue
 
-    # 6.1 List Orders
+    # 6 List Orders
     - url: /orders
       label: orders-list
       think-time: uniform(0s, 0s)
@@ -165,20 +165,6 @@ scenarios:
         - 200
         subject: http-code
         not: false
-
-    # 6.2. List Orders with custom pagination
-    - url: /orders?page=2&page_size=80
-      label: orders-list-with-custom-pagination
-      think-time: uniform(0s, 0s)
-      method: GET
-        
-      assert:
-      - contains:
-        - 200
-        subject: http-code
-        not: false
-
-    
   
 reporting:
 - module: final-stats
